@@ -297,7 +297,7 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 			while (ua_h != &tdata->msg->hdr) {
 				pjsip_hdr *next = ua_h->next;
 				pjsip_generic_string_hdr *gh = (pjsip_generic_string_hdr *) ua_h;
-				if (ua_h->type == PJSIP_H_OTHER && pj_strcmp2(&gh->hname, "User-Agent") == 0) {
+				if (ua_h->type == PJSIP_H_OTHER && pj_strcmp2(&ua_h->name, "User-Agent") == 0) {
 					pj_list_erase(ua_h);
 				}
 				ua_h = next;
