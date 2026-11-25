@@ -621,11 +621,12 @@ static int sip_options_qualify_resolve_task(void *obj)
 			 * SBC keepalive (reference: sibling subscriber frames via SBC
 			 * 200-OK replies, 2026-11-25): no Contact, no Route, no
 			 * User-Agent; From is the registrar domain identity with no
-			 * user part and no display name. Allow/Supported/
+			 * user part and no display name; R-URI and To name the SBC's
+			 * literal address (the sibling's wire shape). Allow/Supported/
 			 * Max-Forwards are handled by the message filter (2.4). The
-			 * R-URI/To stay the AOR contact (sip:ka.ims.airtel.in), which
-			 * resolves to the SBC via the pod's hostAliases. */
+			 * destination itself stays the resolved AOR contact target. */
 			pjsip_hdr *h;
+			pjsip_sip_uri *turi;
 			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_CONTACT, NULL))) {
 			}
 			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_ROUTE, NULL))) {
@@ -638,6 +639,19 @@ static int sip_options_qualify_resolve_task(void *obj)
 				((pjsip_fromto_hdr *) h)->name.slen = 0;
 				furi->user.slen = 0;
 				pj_strdup2(tdata->pool, &furi->host, "ka.ims.airtel.in");
+			}
+			h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_TO, NULL);
+			if (h && ast_sip_is_uri_sip_sips(((pjsip_fromto_hdr *) h)->uri)) {
+				turi = pjsip_uri_get_uri(((pjsip_fromto_hdr *) h)->uri);
+				turi->user.slen = 0;
+				pj_strdup2(tdata->pool, &turi->host,
+					tdata->tp_info.dst_name);
+			}
+			turi = pjsip_uri_get_uri(tdata->msg->line.req.uri);
+			if (ast_sip_is_uri_sip_sips(tdata->msg->line.req.uri) && turi) {
+				turi->user.slen = 0;
+				pj_strdup2(tdata->pool, &turi->host,
+					tdata->tp_info.dst_name);
 			}
 		}
 
