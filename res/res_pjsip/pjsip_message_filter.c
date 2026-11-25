@@ -35,6 +35,8 @@ static pj_bool_t filter_on_rx_message(pjsip_rx_data *rdata);
 struct filter_message_restrictions {
 	/*! \brief Disallow modification of the From domain */
 	unsigned int disallow_from_domain_modification;
+	/*! \brief Emit ONT-shaped headers (drop/replace pjproject defaults) */
+	unsigned int ont_parity;
 };
 
 static pjsip_module filter_module_transport = {
@@ -74,6 +76,7 @@ static void filter_outgoing_message(struct ast_sip_endpoint *endpoint, struct as
 	struct filter_message_restrictions *restrictions = get_restrictions(tdata);
 
 	restrictions->disallow_from_domain_modification = !ast_strlen_zero(endpoint->fromdomain);
+	restrictions->ont_parity = endpoint->ont_parity;
 }
 
 /*! \brief PJSIP Supplement for tagging messages with restrictions */
@@ -89,6 +92,7 @@ static void filter_session_outgoing_message(struct ast_sip_session *session, str
 	struct filter_message_restrictions *restrictions = get_restrictions(tdata);
 
 	restrictions->disallow_from_domain_modification = !ast_strlen_zero(session->endpoint->fromdomain);
+	restrictions->ont_parity = session->endpoint->ont_parity;
 }
 
 /*! \brief PJSIP Session Supplement for tagging messages with restrictions */
@@ -235,6 +239,31 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 	pjmedia_sdp_session *sdp;
 
 	sanitize_tdata(tdata);
+
+	/* ONT parity (note: get_restrictions() stores under filter_module_tsx.id
+	 * while the lookup above intentionally uses filter_module_transport.id
+	 * and historically returns NULL -- do not "repair" that; read parity
+	 * with the tsx id in a separate lookup). */
+	{
+		struct filter_message_restrictions *parity =
+			ast_sip_mod_data_get(tdata->mod_data, filter_module_tsx.id, MOD_DATA_RESTRICTIONS);
+		if (parity && parity->ont_parity) {
+			pjsip_hdr *h;
+			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL))) {
+				pjsip_msg_del_hdr(tdata->msg, h);
+			}
+			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_MAX_FORWARDS, NULL))) {
+				pjsip_msg_del_hdr(tdata->msg, h);
+			}
+			if ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_SUPPORTED, NULL))) {
+				pjsip_generic_array_hdr *sup = (pjsip_generic_array_hdr *)h;
+				if (sup->count > 0) {
+					sup->count = 1;
+					sup->values[0] = pj_str("100rel");
+				}
+			}
+		}
+	}
 
 	/* Use the destination information to determine what local interface this message will go out on */
 	pjsip_tpmgr_fla2_param_default(&prm);

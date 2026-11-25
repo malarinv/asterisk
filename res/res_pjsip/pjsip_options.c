@@ -616,6 +616,34 @@ static int sip_options_qualify_resolve_task(void *obj)
 			continue;
 		}
 
+		if (batch->endpoint->ont_parity) {
+			/* ONT parity: shape the qualify OPTIONS like the carrier ONT's
+			 * SBC keepalive (reference: sibling subscriber frames via SBC
+			 * 200-OK replies, 2026-11-25): no Contact, no Route, no
+			 * User-Agent; From is the registrar domain identity with no
+			 * user part and no display name. Allow/Supported/
+			 * Max-Forwards are handled by the message filter (2.4). The
+			 * R-URI/To stay the AOR contact (sip:ka.ims.airtel.in), which
+			 * resolves to the SBC via the pod's hostAliases. */
+			pjsip_hdr *h;
+			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL))) {
+				pjsip_msg_del_hdr(tdata->msg, h);
+			}
+			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL))) {
+				pjsip_msg_del_hdr(tdata->msg, h);
+			}
+			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_USER_AGENT, NULL))) {
+				pjsip_msg_del_hdr(tdata->msg, h);
+			}
+			h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL);
+			if (h && ast_sip_is_uri_sip_sips(((pjsip_fromto_hdr *) h)->uri)) {
+				pjsip_sip_uri *furi = pjsip_uri_get_uri(((pjsip_fromto_hdr *) h)->uri);
+				((pjsip_fromto_hdr *) h)->name.slen = 0;
+				furi->user.slen = 0;
+				pj_strdup2(tdata->pool, &furi->host, "ka.ims.airtel.in");
+			}
+		}
+
 		if (!ast_strlen_zero(batch->contact->outbound_proxy) &&
 			ast_sip_set_outbound_proxy(tdata, batch->contact->outbound_proxy)) {
 			pjsip_tx_data_dec_ref(tdata);

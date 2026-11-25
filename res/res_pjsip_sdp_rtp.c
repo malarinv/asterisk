@@ -735,7 +735,7 @@ static pjmedia_sdp_attr* generate_rtpmap_attr2(struct ast_sip_session *session, 
 	return attr;
 }
 
-static pjmedia_sdp_attr* generate_fmtp_attr(pj_pool_t *pool, struct ast_format *format, int rtp_code)
+static pjmedia_sdp_attr* generate_fmtp_attr(pj_pool_t *pool, struct ast_format *format, int rtp_code, unsigned int ont_parity)
 {
 	struct ast_str *fmtp0 = ast_str_alloca(256);
 	pj_str_t fmtp1;
@@ -743,6 +743,33 @@ static pjmedia_sdp_attr* generate_fmtp_attr(pj_pool_t *pool, struct ast_format *
 	char *tmp;
 
 	ast_format_generate_sdp_fmtp(format, rtp_code, &fmtp0);
+	if (ont_parity) {
+		/* ONT parity: the carrier ONT emits no fmtp for G.729 (no annexb
+		 * parameter at all). Strip every annexb= entry; if nothing remains
+		 * before the fmtp: colon, emit no fmtp line. */
+		char *src = ast_str_buffer(fmtp0);
+		char *dst = src;
+		char *colon = strchr(src, ':');
+		char *rest = colon ? colon + 1 : src;
+
+		while (*rest) {
+			size_t len = strcspn(rest, ";");
+			if (strncasecmp(rest, "annexb=", 7) && strncasecmp(rest, "annexb ", 7)) {
+				if (dst != ast_str_buffer(fmtp0)) {
+					*dst++ = ';';
+				}
+				memmove(dst, rest, len);
+				dst += len;
+			}
+			rest += len + (rest[len] ? 1 : 0);
+		}
+		*dst = '\0';
+		if (!*ast_str_buffer(fmtp0) || (colon && dst == colon)) {
+			/* nothing left before the fmtp: colon -- no fmtp line at all */
+			return NULL;
+		}
+		ast_str_update(fmtp0, dst - ast_str_buffer(fmtp0));
+	}
 	if (ast_str_strlen(fmtp0)) {
 		tmp = ast_str_buffer(fmtp0) + ast_str_strlen(fmtp0) - 1;
 		/* remove any carriage return line feeds */
@@ -2055,7 +2082,7 @@ static int create_outgoing_sdp_stream(struct ast_sip_session *session, struct as
 			media->attr[media->attr_count++] = attr;
 		}
 
-		if ((attr = generate_fmtp_attr(pool, format, rtp_code))) {
+		if ((attr = generate_fmtp_attr(pool, format, rtp_code, session->endpoint->ont_parity))) {
 			media->attr[media->attr_count++] = attr;
 		}
 
@@ -2087,6 +2114,18 @@ static int create_outgoing_sdp_stream(struct ast_sip_session *session, struct as
 					media->attr[media->attr_count++] = attr;
 				}
 			} else if (build_dtmf_sample_rates) {
+				if (session->endpoint->ont_parity) {
+					/* ONT parity: a single 8 kHz telephone-event rtpmap at
+					 * payload 97, no fmtp line. Register the receive mapping
+					 * on this RTP instance so inbound DTMF at 97 decodes. */
+					rtp_code = 97;
+					if ((attr = generate_rtpmap_attr2(session, media, pool, rtp_code, 0, NULL, index, DEFAULT_DTMF_SAMPLE_RATE_MS))) {
+						media->attr[media->attr_count++] = attr;
+					}
+					ast_rtp_codecs_payloads_set_rtpmap_type(
+						ast_rtp_instance_get_codecs(session_media->rtp), NULL, 97,
+						"audio", "telephone-event", 0);
+				} else {
 				/*
 				 * Walk through the possible bitrates for the RFC 2833/4733 digits and generate the rtpmap
 				 * attributes.
@@ -2127,6 +2166,7 @@ static int create_outgoing_sdp_stream(struct ast_sip_session *session, struct as
 						media->attr[media->attr_count++] = attr;
 					}
 				}
+				} /* stock DTMF handling */
 			}
 
 			if (media->desc.fmt_count == PJMEDIA_MAX_SDP_FMT) {
@@ -2154,7 +2194,7 @@ static int create_outgoing_sdp_stream(struct ast_sip_session *session, struct as
 		media->attr[media->attr_count++] = attr;
 	}
 
-	if (max_packet_size) {
+	if (max_packet_size && !session->endpoint->ont_parity) {
 		snprintf(tmp, sizeof(tmp), "%d", max_packet_size);
 		attr = pjmedia_sdp_attr_create(pool, "maxptime", pj_cstr(&stmp, tmp));
 		media->attr[media->attr_count++] = attr;

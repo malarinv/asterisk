@@ -1094,6 +1094,8 @@ struct ast_sip_endpoint {
 		/*! STIR/SHAKEN profile to use */
 		AST_STRING_FIELD(stir_shaken_profile);
 	);
+	/*! Emit SIP/SDP shapes matching the carrier's provisioned ONT */
+	unsigned int ont_parity;
 	/*! Configuration for extensions */
 	struct ast_sip_endpoint_extensions extensions;
 	/*! Configuration relating to media */
