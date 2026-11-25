@@ -335,10 +335,11 @@ void ast_sip_message_apply_transport(const char *transport_name, pjsip_tx_data *
 		return;
 	}
 
-	if (!transport_state->flow) {
-		ao2_ref(transport_state, -1);
-		return;
-	}
+	/* ONT parity: this transport is UDP, so transport_state->flow is 0 and
+	 * upstream skips service routes entirely. The carrier SBC (ka.ims.airtel.in)
+	 * REQUIRES its Service-Route on INVITEs: without it the SBC silently drops
+	 * the call (no response at all; measured 2026-11-25). Apply Service Routes
+	 * whenever they were captured, regardless of transport type. */
 
 	ao2_lock(transport_state);
 
