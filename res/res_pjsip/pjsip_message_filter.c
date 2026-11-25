@@ -288,7 +288,19 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 					tdata->pool, &str_allow, &allow_ont);
 				pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *) allow);
 			}
-			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_USER_AGENT, NULL))) {
+			/* This pjproject does not model User-Agent as a known header
+			 * (PJSIP_H_USER_AGENT does not exist), so UA headers are stored
+			 * generically; match them by name or our inserted MTK stacks on
+			 * every retransmission pass. */
+			pjsip_hdr *ua_h;
+			ua_h = tdata->msg->hdr.next;
+			while (ua_h != &tdata->msg->hdr) {
+				pjsip_hdr *next = ua_h->next;
+				pjsip_generic_string_hdr *gh = (pjsip_generic_string_hdr *) ua_h;
+				if (ua_h->type == PJSIP_H_OTHER && pj_strcmp2(&gh->hname, "User-Agent") == 0) {
+					pj_list_erase(ua_h);
+				}
+				ua_h = next;
 			}
 			{
 				pjsip_generic_string_hdr *ua = pjsip_generic_string_hdr_create(
