@@ -267,7 +267,7 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 			h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL);
 			while (h) {
 				pjsip_hdr *next = h->next;
-				pjsip_msg_del_hdr(tdata->msg, h);
+				pjsip_msg_remove_hdr(tdata->msg, h);
 				h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, next);
 			}
 			if (had_allow) {
@@ -275,8 +275,8 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 					tdata->pool, &str_allow, &allow_ont);
 				pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *) allow);
 			}
-			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_USER_AGENT, NULL))) {
-				pjsip_msg_del_hdr(tdata->msg, h);
+			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_USER_AGENT_UNIMP, NULL))) {
+				pjsip_msg_remove_hdr(tdata->msg, h);
 			}
 			{
 				pjsip_generic_string_hdr *ua = pjsip_generic_string_hdr_create(
