@@ -263,6 +263,23 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 					" UPDATE, MESSAGE, REFER, SUBSCRIBE, NOTIFY, PING") - 1
 			};
 			static const pj_str_t ua_ont = { "MTK", 3 };
+			/* From display: the ONT puts the CLI digits as the display
+			 * name; Asterisk emits "Anonymous" (or nothing) on fresh
+			 * originate channels. Mirror the wire: copy the URI user part
+			 * into the display name when it is empty or "Anonymous". */
+			{
+				pjsip_fromto_hdr *fhdr = (pjsip_fromto_hdr *)
+					pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL);
+				if (fhdr && ast_sip_is_uri_sip_sips(fhdr->uri)) {
+					pjsip_sip_uri *furi = pjsip_uri_get_uri(fhdr->uri);
+					if (pj_strcmp2(&fhdr->name, "Anonymous") == 0 ||
+						fhdr->name.slen == 0) {
+						if (furi->user.slen > 0) {
+							fhdr->name = furi->user;
+						}
+					}
+				}
+			}
 			int had_allow = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL) != NULL;
 			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_ALLOW, NULL))) {
 			}
@@ -271,7 +288,7 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 					tdata->pool, &str_allow, &allow_ont);
 				pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *) allow);
 			}
-			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_USER_AGENT_UNIMP, NULL))) {
+			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_USER_AGENT, NULL))) {
 			}
 			{
 				pjsip_generic_string_hdr *ua = pjsip_generic_string_hdr_create(
