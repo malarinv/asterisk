@@ -635,8 +635,10 @@ static int sip_options_qualify_resolve_task(void *obj)
 			}
 			h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL);
 			if (h && ast_sip_is_uri_sip_sips(((pjsip_fromto_hdr *) h)->uri)) {
+				pjsip_name_addr *fnaddr = (pjsip_name_addr *)
+					((pjsip_fromto_hdr *) h)->uri;
 				pjsip_sip_uri *furi = pjsip_uri_get_uri(((pjsip_fromto_hdr *) h)->uri);
-				((pjsip_fromto_hdr *) h)->name.slen = 0;
+				fnaddr->display_name.slen = 0;
 				furi->user.slen = 0;
 				pj_strdup2(tdata->pool, &furi->host, "ka.ims.airtel.in");
 			}

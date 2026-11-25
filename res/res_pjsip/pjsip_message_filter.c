@@ -271,12 +271,15 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 				pjsip_fromto_hdr *fhdr = (pjsip_fromto_hdr *)
 					pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL);
 				if (fhdr && ast_sip_is_uri_sip_sips(fhdr->uri)) {
+					/* pjsip_fromto_hdr has no display-name member: it lives
+					 * in the pjsip_name_addr wrapping the URI. */
+					pjsip_name_addr *naddr = (pjsip_name_addr *) fhdr->uri;
 					pjsip_sip_uri *furi = pjsip_uri_get_uri(fhdr->uri);
-					if (pj_strcmp2(&fhdr->name, "Anonymous") == 0 ||
-						fhdr->name.slen == 0) {
-						if (furi->user.slen > 0) {
-							fhdr->name = furi->user;
-						}
+					if (naddr &&
+						(pj_strcmp2(&naddr->display_name, "Anonymous") == 0 ||
+						 naddr->display_name.slen == 0) &&
+						furi->user.slen > 0) {
+						naddr->display_name = furi->user;
 					}
 				}
 			}
