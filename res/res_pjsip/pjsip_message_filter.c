@@ -249,17 +249,45 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 			ast_sip_mod_data_get(tdata->mod_data, filter_module_tsx.id, MOD_DATA_RESTRICTIONS);
 		if (parity && parity->ont_parity) {
 			pjsip_hdr *h;
-			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL))) {
+			/* Reference (fixtures/ont/ont-outbound-invite.txt): the ONT
+			 * KEEPS Allow, Max-Forwards and User-Agent on the wire but with
+			 * its own values. Max-Forwards: 70 matches stock; the other two
+			 * are replaced below. Allow is replaced only when present
+			 * (ONT REGISTER carries none); Supported is cut to 'replaces'. */
+			static const pj_str_t str_allow = { "Allow", 5 };
+			static const pj_str_t str_user_agent = { "User-Agent", 10 };
+			static const pj_str_t allow_ont = {
+				"INVITE, ACK, OPTIONS, BYE, CANCEL, INFO, REGISTER, PRACK,"
+				" UPDATE, MESSAGE, REFER, SUBSCRIBE, NOTIFY, PING",
+				sizeof("INVITE, ACK, OPTIONS, BYE, CANCEL, INFO, REGISTER, PRACK,"
+					" UPDATE, MESSAGE, REFER, SUBSCRIBE, NOTIFY, PING") - 1
+			};
+			static const pj_str_t ua_ont = { "MTK", 3 };
+			int had_allow = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL) != NULL;
+			h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL);
+			while (h) {
+				pjsip_hdr *next = h->next;
+				pjsip_msg_del_hdr(tdata->msg, h);
+				h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, next);
+			}
+			if (had_allow) {
+				pjsip_generic_string_hdr *allow = pjsip_generic_string_hdr_create(
+					tdata->pool, &str_allow, &allow_ont);
+				pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *) allow);
+			}
+			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_USER_AGENT, NULL))) {
 				pjsip_msg_del_hdr(tdata->msg, h);
 			}
-			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_MAX_FORWARDS, NULL))) {
-				pjsip_msg_del_hdr(tdata->msg, h);
+			{
+				pjsip_generic_string_hdr *ua = pjsip_generic_string_hdr_create(
+					tdata->pool, &str_user_agent, &ua_ont);
+				pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *) ua);
 			}
 			if ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_SUPPORTED, NULL))) {
 				pjsip_generic_array_hdr *sup = (pjsip_generic_array_hdr *)h;
 				if (sup->count > 0) {
 					sup->count = 1;
-					sup->values[0] = pj_str("100rel");
+					sup->values[0] = pj_str("replaces");
 				}
 			}
 		}
