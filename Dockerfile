@@ -19,6 +19,7 @@ WORKDIR /usr/src/asterisk
 # download server; this deployment ships no sound files.
 RUN ./bootstrap.sh \
  && ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --with-pjproject-bundled \
+ && sed -i 's/-march=native//g' makeopts \
  && make menuselect.makeopts \
  && sed -i -e 's/MENUSELECT_MOH=.*$/MENUSELECT_MOH=/' \
            -e 's/MENUSELECT_CORE_SOUNDS=.*$/MENUSELECT_CORE_SOUNDS=/' \
