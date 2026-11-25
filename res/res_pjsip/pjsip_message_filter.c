@@ -264,19 +264,14 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 			};
 			static const pj_str_t ua_ont = { "MTK", 3 };
 			int had_allow = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL) != NULL;
-			h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL);
-			while (h) {
-				pjsip_hdr *next = h->next;
-				pjsip_msg_find_remove_hdr(tdata->msg, h);
-				h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, next);
+			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_ALLOW, NULL))) {
 			}
 			if (had_allow) {
 				pjsip_generic_string_hdr *allow = pjsip_generic_string_hdr_create(
 					tdata->pool, &str_allow, &allow_ont);
 				pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *) allow);
 			}
-			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_USER_AGENT_UNIMP, NULL))) {
-				pjsip_msg_find_remove_hdr(tdata->msg, h);
+			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_USER_AGENT_UNIMP, NULL))) {
 			}
 			{
 				pjsip_generic_string_hdr *ua = pjsip_generic_string_hdr_create(

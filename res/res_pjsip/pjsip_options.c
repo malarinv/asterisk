@@ -626,14 +626,11 @@ static int sip_options_qualify_resolve_task(void *obj)
 			 * R-URI/To stay the AOR contact (sip:ka.ims.airtel.in), which
 			 * resolves to the SBC via the pod's hostAliases. */
 			pjsip_hdr *h;
-			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL))) {
-				pjsip_msg_find_remove_hdr(tdata->msg, h);
+			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_CONTACT, NULL))) {
 			}
-			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL))) {
-				pjsip_msg_find_remove_hdr(tdata->msg, h);
+			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_ROUTE, NULL))) {
 			}
-			while ((h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_USER_AGENT_UNIMP, NULL))) {
-				pjsip_msg_find_remove_hdr(tdata->msg, h);
+			while ((h = pjsip_msg_find_remove_hdr(tdata->msg, PJSIP_H_USER_AGENT_UNIMP, NULL))) {
 			}
 			h = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL);
 			if (h && ast_sip_is_uri_sip_sips(((pjsip_fromto_hdr *) h)->uri)) {
