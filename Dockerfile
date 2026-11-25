@@ -26,7 +26,9 @@ RUN ./bootstrap.sh \
     menuselect.makeopts \
  && make -j"$(nproc)" \
  && make install DESTDIR=/out \
- && make samples DESTDIR=/out
+ && make samples DESTDIR=/out \
+ && if [ -d /out/usr/sbin ]; then cp -a /out/usr/sbin/. /out/usr/bin/ && rm -rf /out/usr/sbin; fi \
+ && rm -rf /out/var/run
 
 FROM registry.fedoraproject.org/fedora:42
 
@@ -38,10 +40,7 @@ RUN dnf -y install libedit jansson sqlite-libs uuid libxml2 openssl-libs \
  && mkdir -p /var/lib/asterisk /var/log/asterisk /var/spool/asterisk /run/asterisk \
  && chown -R 997:997 /var/lib/asterisk /var/log/asterisk /var/spool/asterisk /run/asterisk
 
-# buildkit's COPY-to-/ chokes on /usr/sbin collisions under the overlay
-# cache; stage + extract instead.
-COPY --from=build /out /astroot
-RUN cp -a /astroot/. / && rm -rf /astroot
+COPY --from=build /out /
 
-ENTRYPOINT ["/usr/sbin/asterisk"]
+ENTRYPOINT ["/usr/bin/asterisk"]
 CMD ["-f", "-vvv"]
