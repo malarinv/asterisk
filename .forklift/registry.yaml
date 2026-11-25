@@ -1,0 +1,107 @@
+# forklift registry — asterisk-parity (malarinv/asterisk)
+#
+# Fork of asterisk/asterisk carrying the carrier-ONT wire-parity patches for
+# the Airtel IMS line (+918048540764). Reference capture and patch rationale:
+# telephony-system fixtures/ont/ont-outbound-invite.txt (genuine ONT frames,
+# captured 2026-11-25 via the hidden WAN->LAN port mirror).
+
+generatedAt: "2026-11-25T22:00:00Z"
+
+# git rev-list --count upstream/24.0.0..HEAD at the last verified rebuild.
+expected_fork_commit_count: 2
+
+features:
+  - name: "ont_parity endpoint option"
+    description: "Per-endpoint ont_parity boolean (sorcery endpoint option, default no) gating every parity behavior; default preserves upstream behavior byte-for-byte."
+    owned_paths:
+      - "include/asterisk/res_pjsip.h"
+      - "res/res_pjsip/pjsip_configuration.c"
+      - "res/res_pjsip/pjsip_config.xml"
+    protecting_tests: []
+    coverage_exempt: "No in-tree C unit-test harness covers res_pjsip config registration; verified by Phase 5 wire diffs against the ONT reference and by the flag-off/flag-on captures."
+    status: "active"
+
+  - name: "SDP parity (maxptime/fmtp/tel-event)"
+    description: "With ont_parity: no a=maxptime, no G729 annexb fmtp (no fmtp line when empty), single 8kHz telephone-event rtpmap at payload 97 with receive mapping registered on the instance. rtp_engine.c untouched."
+    owned_paths:
+      - "res/res_pjsip_sdp_rtp.c"
+    protecting_tests: []
+    coverage_exempt: "SDP emission is exercised on the wire only; verified against fixtures/ont/ont-outbound-invite.txt in Phase 5."
+    status: "active"
+
+  - name: "Header parity (message filter)"
+    description: "With ont_parity: Allow replaced with the ONT's 14-method list (only when already present), User-Agent replaced with 'MTK', Supported cut to 'replaces'. Reads parity via filter_module_tsx.id slot; the broken transport.id lookup is left unrepaired deliberately."
+    owned_paths:
+      - "res/res_pjsip/pjsip_message_filter.c"
+    protecting_tests: []
+    coverage_exempt: "Header shapes verified on the wire in Phase 5.3/5.3a."
+    status: "active"
+
+  - name: "Qualify OPTIONS shape"
+    description: "With ont_parity: qualify OPTIONS drops Contact/Route/User-Agent and rewrites From to the bare registrar-domain identity, matching the carrier ONT's SBC keepalive (sibling-subscriber reference; our own idle OPTIONS are unobservable through the mirror)."
+    owned_paths:
+      - "res/res_pjsip/pjsip_options.c"
+    protecting_tests: []
+    coverage_exempt: "Verified in Phase 5.2 by capture-diff of live qualify OPTIONS."
+    status: "active"
+
+divergences: []
+
+removals: []
+
+owned_symbols:
+  - file: "include/asterisk/res_pjsip.h"
+    feature: "ont_parity endpoint option"
+    symbols:
+      - name: "ont_parity"
+        location: "struct ast_sip_endpoint"
+        description: "Boolean: emit carrier-ONT wire shapes for this endpoint."
+  - file: "res/res_pjsip/pjsip_message_filter.c"
+    feature: "Header parity (message filter)"
+    symbols:
+      - name: "filter_message_restrictions.ont_parity"
+        location: "struct filter_message_restrictions"
+        description: "Per-message parity flag copied from the endpoint in both outgoing supplements."
+  - file: "res/res_pjsip_sdp_rtp.c"
+    feature: "SDP parity (maxptime/fmtp/tel-event)"
+    symbols:
+      - name: "generate_fmtp_attr"
+        location: "static function"
+        description: "Signature extended with ont_parity; strips annexb and can suppress the whole line."
+  - file: "res/res_pjsip/pjsip_options.c"
+    feature: "Qualify OPTIONS shape"
+    symbols: []
+
+harness:
+  version: 1
+
+  fork:
+    name: "asterisk"
+    short: "asterisk"
+    remote: "origin"
+    branch: "parity/24.0.0"
+
+  upstream:
+    name: "asterisk"
+    short: "upstream"
+    remote: "upstream"
+    branch: "24.0.0"
+
+  project:
+    languages: ["c"]
+    source_roots: ["res/", "include/"]
+    test_globs: ["tests/"]
+    typecheck_command: "make"
+    test_command: "make"
+    lint_command: "git diff --check"
+    conflict_marker_globs: ["res/**/*.c", "include/**/*.h"]
+    package_aliases: {}
+
+  fork_doc: ".forklift/README.md"
+  sync_command: "git rebase upstream/24.0.0"
+
+  checks:
+    behavioral_source_regex: "^res/.*\\.c$"
+    native_sentinel: null
+    footprint_baseline: ".forklift/footprint-baseline.json"
+    excludes: [".forklift/"]
