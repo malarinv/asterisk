@@ -276,10 +276,10 @@ static pj_status_t filter_on_tx_message(pjsip_tx_data *tdata)
 					pjsip_name_addr *naddr = (pjsip_name_addr *) fhdr->uri;
 					pjsip_sip_uri *furi = pjsip_uri_get_uri(fhdr->uri);
 					if (naddr &&
-						(pj_strcmp2(&naddr->display_name, "Anonymous") == 0 ||
-						 naddr->display_name.slen == 0) &&
+						(pj_strcmp2(&naddr->display, "Anonymous") == 0 ||
+						 naddr->display.slen == 0) &&
 						furi->user.slen > 0) {
-						naddr->display_name = furi->user;
+						naddr->display = furi->user;
 					}
 				}
 			}
