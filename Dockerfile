@@ -38,7 +38,10 @@ RUN dnf -y install libedit jansson sqlite-libs uuid libxml2 openssl-libs \
  && mkdir -p /var/lib/asterisk /var/log/asterisk /var/spool/asterisk /run/asterisk \
  && chown -R 997:997 /var/lib/asterisk /var/log/asterisk /var/spool/asterisk /run/asterisk
 
-COPY --from=build /out /
+# buildkit's COPY-to-/ chokes on /usr/sbin collisions under the overlay
+# cache; stage + extract instead.
+COPY --from=build /out /astroot
+RUN cp -a /astroot/. / && rm -rf /astroot
 
 ENTRYPOINT ["/usr/sbin/asterisk"]
 CMD ["-f", "-vvv"]
