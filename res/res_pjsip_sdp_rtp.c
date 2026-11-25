@@ -768,7 +768,7 @@ static pjmedia_sdp_attr* generate_fmtp_attr(pj_pool_t *pool, struct ast_format *
 			/* nothing left before the fmtp: colon -- no fmtp line at all */
 			return NULL;
 		}
-		ast_str_update(fmtp0, dst - ast_str_buffer(fmtp0));
+		fmtp0->__AST_STR_USED = dst - ast_str_buffer(fmtp0);
 	}
 	if (ast_str_strlen(fmtp0)) {
 		tmp = ast_str_buffer(fmtp0) + ast_str_strlen(fmtp0) - 1;
