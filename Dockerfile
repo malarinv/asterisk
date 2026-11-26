@@ -9,7 +9,7 @@ FROM registry.fedoraproject.org/fedora:42 AS build
 RUN dnf -y install gcc gcc-c++ make autoconf automake libtool bzip2 patch \
     ncurses-devel libedit-devel jansson-devel sqlite-devel libuuid-devel \
     libxml2-devel openssl-devel libsrtp-devel speex-devel speexdsp-devel \
-    libogg-devel libvorbis-devel curl-devel \
+    libogg-devel libvorbis-devel curl-devel openldap-devel \
  && dnf clean all
 
 COPY . /usr/src/asterisk
@@ -35,7 +35,7 @@ RUN ./bootstrap.sh \
 FROM registry.fedoraproject.org/fedora:42
 
 RUN dnf -y install libedit jansson sqlite-libs uuid libxml2 openssl-libs \
-    libsrtp speex speexdsp libogg libvorbis curl \
+    libsrtp speex speexdsp libogg libvorbis curl openldap compat-openldap \
  && dnf clean all \
  && groupadd -g 997 asterisk \
  && useradd -u 997 -g 997 -M -s /sbin/nologin asterisk \
