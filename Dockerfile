@@ -35,7 +35,7 @@ RUN ./bootstrap.sh \
 FROM registry.fedoraproject.org/fedora:42
 
 RUN dnf -y install libedit jansson sqlite-libs uuid libxml2 openssl-libs \
-    libsrtp speex speexdsp libogg libvorbis curl openldap compat-openldap \
+    libsrtp speex speexdsp libogg libvorbis curl openldap \
  && dnf clean all \
  && groupadd -g 997 asterisk \
  && useradd -u 997 -g 997 -M -s /sbin/nologin asterisk \
