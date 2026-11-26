@@ -296,11 +296,10 @@ int ast_sip_transport_state_set_service_routes(const char *transport_name, struc
 		return -1;
 	}
 
-	if (!transport_state->flow) {
-		ao2_ref(transport_state, -1);
-		ast_sip_service_route_vector_destroy(service_routes);
-		return 0;
-	}
+	/* ONT parity: upstream discards captured Service Routes on non-flow
+	 * transports, which means a UDP registration can never carry its
+	 * Service-Route onto later INVITEs. Storage itself is inert; the
+	 * ont_parity gate lives in ast_sip_message_apply_transport(). */
 
 	ao2_lock(transport_state);
 	ast_sip_service_route_vector_destroy(transport_state->service_routes);
@@ -312,13 +311,15 @@ int ast_sip_transport_state_set_service_routes(const char *transport_name, struc
 	return 0;
 }
 
-void ast_sip_message_apply_transport(const char *transport_name, pjsip_tx_data *tdata)
+void ast_sip_message_apply_transport(struct ast_sip_endpoint *endpoint, pjsip_tx_data *tdata)
 {
 	struct ast_sip_transport_state *transport_state;
+	const char *transport_name;
 
-	if (ast_strlen_zero(transport_name)) {
+	if (!endpoint || ast_strlen_zero(endpoint->transport)) {
 		return;
 	}
+	transport_name = endpoint->transport;
 
 	/* We only currently care about requests that are of the INVITE, CANCEL, or OPTIONS
 	 * type but in the future we could support other messages.
@@ -335,11 +336,16 @@ void ast_sip_message_apply_transport(const char *transport_name, pjsip_tx_data *
 		return;
 	}
 
-	/* ONT parity: this transport is UDP, so transport_state->flow is 0 and
-	 * upstream skips service routes entirely. The carrier SBC (ka.ims.airtel.in)
+	/* ONT parity: upstream applies service routes only on flow transports
+	 * (transport_state->flow is 0 on UDP). The carrier SBC (ka.ims.airtel.in)
 	 * REQUIRES its Service-Route on INVITEs: without it the SBC silently drops
-	 * the call (no response at all; measured 2026-11-25). Apply Service Routes
-	 * whenever they were captured, regardless of transport type. */
+	 * the call (no response at all; measured 2026-11-25). With ont_parity set,
+	 * apply Service Routes whenever they were captured, regardless of transport
+	 * type; without the flag this stays exactly upstream behaviour. */
+	if (!transport_state->flow && !endpoint->ont_parity) {
+		ao2_ref(transport_state, -1);
+		return;
+	}
 
 	ao2_lock(transport_state);
 

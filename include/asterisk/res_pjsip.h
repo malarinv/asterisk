@@ -3889,10 +3889,14 @@ int ast_sip_transport_state_set_service_routes(const char *transport_name, struc
  * \brief Apply the configuration for a transport to an outgoing message
  * \since 17.0.0
  *
- * \param transport_name The name of the transport to apply configuration from
+ * \param endpoint The endpoint sending the message (NULL allowed; nothing applied)
  * \param tdata The SIP message
+ *
+ * \note ONT parity: upstream applies Preferred Identity and Service Routes only
+ * on flow transports. With \a endpoint->ont_parity set they are applied on any
+ * transport (the carrier SBC requires its Service-Route on UDP INVITEs).
  */
-void ast_sip_message_apply_transport(const char *transport_name, pjsip_tx_data *tdata);
+void ast_sip_message_apply_transport(struct ast_sip_endpoint *endpoint, pjsip_tx_data *tdata);
 
 /*!
  * \brief Allocate a vector of service routes

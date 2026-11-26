@@ -1985,7 +1985,7 @@ int ast_sip_send_out_of_dialog_request_with_tsx(pjsip_tx_data *tdata,
 	}
 
 	if (endpoint) {
-		ast_sip_message_apply_transport(endpoint->transport, tdata);
+		ast_sip_message_apply_transport(endpoint, tdata);
 	}
 
 	contact = ast_sip_mod_data_get(tdata->mod_data, supplement_module.id, MOD_DATA_CONTACT);
@@ -2398,7 +2398,7 @@ static void supplement_outgoing_response(pjsip_tx_data *tdata, struct ast_sip_en
 	struct ast_sip_contact *contact = ast_sip_mod_data_get(tdata->mod_data, supplement_module.id, MOD_DATA_CONTACT);
 
 	if (sip_endpoint) {
-		ast_sip_message_apply_transport(sip_endpoint->transport, tdata);
+		ast_sip_message_apply_transport(sip_endpoint, tdata);
 	}
 
 	AST_RWLIST_RDLOCK(&supplements);
