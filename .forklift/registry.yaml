@@ -8,7 +8,7 @@
 generatedAt: "2026-11-25T22:00:00Z"
 
 # git rev-list --count upstream/24.0.0..HEAD at the last verified rebuild.
-expected_fork_commit_count: 2
+expected_fork_commit_count: 20
 
 features:
   - name: "ont_parity endpoint option"
@@ -43,6 +43,14 @@ features:
       - "res/res_pjsip/pjsip_options.c"
     protecting_tests: []
     coverage_exempt: "Verified in Phase 5.2 by capture-diff of live qualify OPTIONS."
+    status: "active"
+
+  - name: "Service-Route on UDP (REGISTER 200 capture + INVITE injection)"
+    description: "ast_sip_transport_state_set_service_routes() no longer discards captured Service Routes on non-flow transports; ast_sip_message_apply_transport() now takes the endpoint and applies Preferred Identity/Service Routes on any transport when endpoint->ont_parity is set, keeping exact upstream flow-gated behavior otherwise. The carrier SBC requires its Service-Route pair on INVITEs (verified on the wire 2026-11-26)."
+    owned_paths:
+      - "res/res_pjsip/config_transport.c"
+    protecting_tests: []
+    coverage_exempt: "Verified by wire capture: INVITE carries the REGISTER 200 Service-Route pair (edge hop + originating@...ms.airtel.in hop); flag-off endpoints still get upstream behavior."
     status: "active"
 
 divergences: []
